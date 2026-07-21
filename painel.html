@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel — Recuperação Semestral 1° Semestre</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --navy:#0f1b2d; --navy2:#1a2d45; --gold:#c9a84c; --gold2:#e8c96d;
+    --cream:#f5f0e8; --white:#fff; --gray:#8a9ab0; --light:#eef2f7;
+    --green:#27ae60; --radius:12px; --shadow:0 8px 32px rgba(15,27,45,0.12);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); min-height:100vh; color:var(--navy); }
+
+  header {
+    background:var(--navy); padding:20px 24px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    border-bottom:3px solid var(--gold);
+  }
+  .logo-icon { width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0; }
+  .header-text h1 { font-family:'Playfair Display',serif;color:var(--white);font-size:1.2rem;line-height:1.2; }
+  .header-text h1 span { color:var(--gold2); }
+  .header-text p { color:var(--gray);font-size:.78rem;margin-top:2px; }
+  .sync-badge { margin-left:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:50px;padding:6px 14px;font-size:.78rem;color:var(--gray); }
+  .sync-dot { width:8px;height:8px;border-radius:50%;background:#555;transition:background .3s; }
+  .sync-dot.online  { background:var(--green); }
+  .sync-dot.syncing { background:var(--gold); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  .tabs { display:flex;background:var(--navy2);padding:0 16px;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch; }
+  .tabs::-webkit-scrollbar { display:none; }
+  .tab { padding:13px 20px;cursor:pointer;color:var(--gray);font-size:.85rem;font-weight:500;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0; }
+  .tab:hover { color:var(--white); }
+  .tab.active { color:var(--gold2);border-bottom-color:var(--gold); }
+
+  main { max-width:1100px;margin:0 auto;padding:28px 16px 80px; }
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  .section-title { font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:5px; }
+  .section-sub { color:var(--gray);font-size:.85rem;margin-bottom:20px;line-height:1.5; }
+
+  /* OVERVIEW */
+  .overview-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px; }
+  .turma-card { background:var(--white);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;border-left:4px solid #d0d8e4; }
+  .turma-card:hover { transform:translateY(-2px); }
+  .turma-card.complete { border-left-color:var(--green); }
+  .turma-card.partial  { border-left-color:var(--gold); }
+  .turma-card h4 { font-family:'Playfair Display',serif;font-size:.95rem;margin-bottom:4px; }
+  .turma-card .prog { font-size:.78rem;color:var(--gray); }
+  .prog-bar { height:5px;background:#e0e7ef;border-radius:10px;margin-top:8px;overflow:hidden; }
+  .prog-fill { height:100%;background:var(--gold);border-radius:10px;transition:width .4s; }
+  .prog-fill.full { background:var(--green); }
+
+  /* DETALHE TURMA */
+  .back-btn { display:inline-flex;align-items:center;gap:6px;color:var(--gray);font-size:.85rem;cursor:pointer;margin-bottom:16px;padding:8px 14px;background:var(--white);border-radius:50px;border:1.5px solid #d0d8e4;transition:all .2s; }
+  .back-btn:hover { border-color:var(--gold);color:var(--gold); }
+
+  .detalhe-card { background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden; }
+  .detalhe-header { padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:10px; }
+  .detalhe-header h4 { font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:8px; }
+  .detalhe-body { padding:0 18px 16px;font-size:.88rem;color:#444;line-height:1.6;border-top:1px solid #f0f0f0; }
+  .detalhe-body .prof { font-size:.78rem;color:var(--gray);margin-top:6px; }
+  .status-dot { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+  .status-dot.ok    { background:var(--green); }
+  .status-dot.empty { background:#d0d8e4; }
+
+  /* PDF */
+  .pdf-options { display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px; }
+  .pdf-check { display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid #d0d8e4;border-radius:8px;padding:9px 14px;cursor:pointer;font-size:.85rem;font-weight:500;transition:all .15s;user-select:none; }
+  .pdf-check input { accent-color:var(--gold);width:15px;height:15px;cursor:pointer; }
+  .pdf-check:hover { border-color:var(--gold); }
+
+  .pdf-preview { background:var(--white);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);min-height:200px; }
+  .pdf-preview h2 { font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--navy);border-bottom:2px solid var(--gold);padding-bottom:10px;margin-bottom:18px; }
+  .pdf-turma-block { margin-bottom:20px; }
+  .pdf-turma-block h3 { font-size:.95rem;font-weight:700;color:var(--navy2);background:var(--light);padding:7px 12px;border-radius:6px;margin-bottom:8px; }
+  .pdf-disc-row { padding:6px 12px;font-size:.85rem;border-bottom:1px dashed #e8edf3; }
+  .pdf-disc-row strong { display:block;color:var(--navy);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em; }
+  .pdf-disc-row span { color:#444; }
+  .pdf-disc-row small { color:var(--gray);font-size:.75rem; }
+  .empty-note { color:var(--gray);font-style:italic;font-size:.83rem;padding:5px 12px; }
+
+  .btn-primary { background:var(--navy);color:var(--gold2);border:none;padding:13px 28px;border-radius:50px;font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px;-webkit-appearance:none; }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-gold { background:var(--gold);color:var(--navy); }
+  .btn-row { display:flex;gap:10px;flex-wrap:wrap;margin-top:0;margin-bottom:20px; }
+
+  .toast { position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);color:var(--white);padding:12px 22px;border-radius:50px;font-size:.85rem;box-shadow:0 6px 20px rgba(0,0,0,.25);opacity:0;transition:all .3s;z-index:999;border-left:4px solid var(--gold);white-space:nowrap;max-width:90vw;text-align:center; }
+  .toast.show { transform:translateX(-50%) translateY(0);opacity:1; }
+
+  #loading { position:fixed;inset:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity .4s; }
+  #loading.hide { opacity:0;pointer-events:none; }
+  .spinner { width:40px;height:40px;border:4px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg);} }
+
+  @media(max-width:480px){
+    header{padding:16px;}
+    .sync-badge{margin-left:0;margin-top:4px;width:100%;}
+    main{padding:20px 12px 80px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size:2.5rem;">📚</div>
+  <div class="spinner"></div>
+  <p style="color:#8a9ab0;font-size:.88rem;">Conectando...</p>
+</div>
+
+<header>
+  <div class="logo-icon">📚</div>
+  <div class="header-text">
+    <h1>Painel — <span>Recuperação Semestral</span></h1>
+    <p>Colégio São Thiago — 1° Semestre</p>
+  </div>
+  <div class="sync-badge">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Conectando...</span>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">📊 Visão Geral</div>
+  <div class="tab" onclick="switchTab('pdf')">📄 Gerar PDF</div>
+</div>
+
+<main>
+  <!-- OVERVIEW -->
+  <div class="panel active" id="panel-overview">
+    <p class="section-title">Visão Geral</p>
+    <p class="section-sub">Acompanhe o preenchimento de todas as turmas em tempo real. Clique numa turma para ver os detalhes.</p>
+    <div class="overview-grid" id="overview-grid"></div>
+
+    <!-- DETALHE -->
+    <div id="detalhe-area" style="display:none;margin-top:28px;">
+      <div class="back-btn" onclick="fecharDetalhe()">← Voltar para todas as turmas</div>
+      <p class="section-title" id="detalhe-titulo"></p>
+      <p class="section-sub" id="detalhe-sub"></p>
+      <div id="detalhe-lista"></div>
+    </div>
+  </div>
+
+  <!-- PDF -->
+  <div class="panel" id="panel-pdf">
+    <p class="section-title">Gerar PDF</p>
+    <p class="section-sub">Selecione as turmas e baixe o PDF para enviar no WhatsApp dos pais.</p>
+    <div class="pdf-options" id="pdf-checks"></div>
+    <div class="btn-row">
+      <button class="btn-primary btn-gold" onclick="generatePDF()">⬇️ Baixar PDF</button>
+      <button class="btn-primary" onclick="selectAllPDF()">✅ Selecionar Todas</button>
+    </div>
+    <div class="pdf-preview" id="pdf-preview">
+      <p style="color:var(--gray);font-size:.88rem;">Selecione as turmas acima para visualizar.</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+const fbApp = firebase.apps.length
+  ? firebase.apps[0]
+  : firebase.initializeApp({
+      apiKey: "AIzaSyANjezpnLb5AVWRZgTsEmQQZUVDe9Vyryc",
+      authDomain: "conteudos-cst.firebaseapp.com",
+      databaseURL: "https://conteudos-cst-default-rtdb.firebaseio.com",
+      projectId: "conteudos-cst",
+      storageBucket: "conteudos-cst.firebasestorage.app",
+      messagingSenderId: "919498988914",
+      appId: "1:919498988914:web:b205c911a77dc1b6e6d1eb"
+    });
+const db = firebase.database(fbApp);
+
+db.ref('.info/connected').on('value', snap => {
+  const loading = document.getElementById('loading');
+  if (loading) { loading.classList.add('hide'); setTimeout(()=>loading.remove(),500); }
+  setSyncStatus(snap.val() ? 'online' : 'offline');
+});
+setTimeout(()=>{ const l=document.getElementById('loading'); if(l){l.classList.add('hide');setTimeout(()=>l.remove(),500);} }, 5000);
+
+// ── DADOS ─────────────────────────────────────────────────────────────────────
+const TURMAS = [
+  {key:"6AnoA",  label:"6° Ano A",  grupo:"Ensino Fundamental"},
+  {key:"6AnoB",  label:"6° Ano B",  grupo:"Ensino Fundamental"},
+  {key:"7AnoA",  label:"7° Ano A",  grupo:"Ensino Fundamental"},
+  {key:"7AnoB",  label:"7° Ano B",  grupo:"Ensino Fundamental"},
+  {key:"8AnoA",  label:"8° Ano A",  grupo:"Ensino Fundamental"},
+  {key:"8AnoB",  label:"8° Ano B",  grupo:"Ensino Fundamental"},
+  {key:"9AnoA",  label:"9° Ano A",  grupo:"Ensino Fundamental"},
+  {key:"9AnoB",  label:"9° Ano B",  grupo:"Ensino Fundamental"},
+  {key:"1Serie", label:"1ª Série",  grupo:"Ensino Médio"},
+  {key:"2Serie", label:"2ª Série",  grupo:"Ensino Médio"},
+  {key:"3Serie", label:"3ª Série",  grupo:"Ensino Médio"},
+];
+
+const DISC_EF = ["Portugues","Matematica","Historia","Geografia","Ciencias","EducacaoFisica","Ingles","Artes","ProducaoTextual"];
+const DISC_EM = ["Portugues","Matematica","Historia","Geografia","EducacaoFisica","Ingles","Artes","OficinaTexto","Quimica","Fisica","Biologia","Literatura","Filosofia","Sociologia"];
+
+const LABELS = {
+  Portugues:"Português", Matematica:"Matemática", Historia:"História",
+  Geografia:"Geografia", Ciencias:"Ciências", EducacaoFisica:"Educação Física",
+  Ingles:"Inglês", Artes:"Artes", ProducaoTextual:"Produção Textual",
+  OficinaTexto:"Oficina de Texto", Quimica:"Química", Fisica:"Física",
+  Biologia:"Biologia", Literatura:"Literatura", Filosofia:"Filosofia", Sociologia:"Sociologia"
+};
+
+const ICONS = {
+  Portugues:"📖", Matematica:"📐", Historia:"🏛️", Geografia:"🌍", Ciencias:"🔬",
+  EducacaoFisica:"⚽", Ingles:"🇺🇸", Artes:"🎨", ProducaoTextual:"✍️",
+  OficinaTexto:"📝", Quimica:"⚗️", Fisica:"🔭", Biologia:"🧬",
+  Literatura:"📕", Filosofia:"🧠", Sociologia:"👥"
+};
+
+function getDiscs(key) {
+  const isEM = ["1Serie","2Serie","3Serie"].includes(key);
+  return isEM ? DISC_EM : DISC_EF;
+}
+
+let dados = {};
+let turmaDetalhe = null;
+
+// ── LISTENER ──────────────────────────────────────────────────────────────────
+db.ref('recuperacaoSemestral1').on('value', snap => {
+  dados = snap.val() || {};
+  setSyncStatus('online');
+  renderOverview();
+  if (turmaDetalhe) renderDetalhe(turmaDetalhe);
+  if (document.getElementById('panel-pdf').classList.contains('active')) renderPDFChecks();
+}, ()=> setSyncStatus('offline'));
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (s==='online')  { dot.className='sync-dot online';  lbl.textContent='Conectado'; }
+  if (s==='syncing') { dot.className='sync-dot syncing'; lbl.textContent='Salvando...'; }
+  if (s==='offline') { dot.className='sync-dot';         lbl.textContent='Sem conexão'; }
+}
+
+// ── OVERVIEW ──────────────────────────────────────────────────────────────────
+function renderOverview() {
+  const grid = document.getElementById('overview-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  TURMAS.forEach(t => {
+    const discs = getDiscs(t.key);
+    const filled = discs.filter(d => dados[t.key]&&dados[t.key][d]&&dados[t.key][d].conteudo).length;
+    const pct = Math.round(filled/discs.length*100);
+    const cls = pct===100?'complete':pct>0?'partial':'';
+    const card = document.createElement('div');
+    card.className = 'turma-card '+cls;
+    card.innerHTML = `
+      <h4>${t.label}</h4>
+      <div class="prog">${filled} de ${discs.length} disciplinas</div>
+      <div class="prog-bar"><div class="prog-fill ${pct===100?'full':''}" style="width:${pct}%"></div></div>`;
+    card.onclick = () => abrirDetalhe(t.key);
+    grid.appendChild(card);
+  });
+}
+
+// ── DETALHE ───────────────────────────────────────────────────────────────────
+function abrirDetalhe(key) {
+  turmaDetalhe = key;
+  document.getElementById('overview-grid').style.display = 'none';
+  document.getElementById('detalhe-area').style.display = 'block';
+  renderDetalhe(key);
+}
+
+function fecharDetalhe() {
+  turmaDetalhe = null;
+  document.getElementById('overview-grid').style.display = '';
+  document.getElementById('detalhe-area').style.display = 'none';
+}
+
+function renderDetalhe(key) {
+  const t = TURMAS.find(x=>x.key===key);
+  const discs = getDiscs(key);
+  const filled = discs.filter(d=>dados[key]&&dados[key][d]&&dados[key][d].conteudo).length;
+  document.getElementById('detalhe-titulo').textContent = t.label+' — '+t.grupo;
+  document.getElementById('detalhe-sub').textContent = filled+' de '+discs.length+' disciplinas preenchidas';
+  const lista = document.getElementById('detalhe-lista');
+  lista.innerHTML = '';
+  discs.forEach(d => {
+    const info = dados[key]&&dados[key][d];
+    const card = document.createElement('div');
+    card.className = 'detalhe-card';
+    const hasData = info&&info.conteudo;
+    card.innerHTML = `
+      <div class="detalhe-header">
+        <h4><span>${ICONS[d]||'📋'}</span> ${LABELS[d]||d}</h4>
+        <div class="status-dot ${hasData?'ok':'empty'}"></div>
+      </div>
+      ${hasData ? `<div class="detalhe-body">
+        <div>${info.conteudo}</div>
+        <div class="prof">👤 ${info.professor||'Professor não informado'}</div>
+      </div>` : ''}`;
+    lista.appendChild(card);
+  });
+}
+
+// ── PDF ───────────────────────────────────────────────────────────────────────
+function renderPDFChecks() {
+  const c = document.getElementById('pdf-checks');
+  if (!c) return;
+  c.innerHTML = '';
+  TURMAS.forEach(t => {
+    const discs = getDiscs(t.key);
+    const filled = discs.filter(d=>dados[t.key]&&dados[t.key][d]&&dados[t.key][d].conteudo).length;
+    const lbl = document.createElement('label');
+    lbl.className = 'pdf-check';
+    lbl.innerHTML = `<input type="checkbox" value="${t.key}" onchange="renderPreview()" ${filled>0?'checked':''}> ${t.label} (${filled}/${discs.length})`;
+    c.appendChild(lbl);
+  });
+  renderPreview();
+}
+
+function selectAllPDF() {
+  document.querySelectorAll('#pdf-checks input').forEach(c=>c.checked=true);
+  renderPreview();
+}
+
+function renderPreview() {
+  const checks = [...document.querySelectorAll('#pdf-checks input:checked')].map(c=>c.value);
+  const preview = document.getElementById('pdf-preview');
+  if (!checks.length) { preview.innerHTML='<p style="color:var(--gray);font-size:.88rem;">Selecione as turmas acima para visualizar.</p>'; return; }
+  let html = '<h2>📚 Conteúdos — Recuperação Semestral 1° Semestre</h2>';
+  checks.forEach(key => {
+    const t = TURMAS.find(x=>x.key===key);
+    html += `<div class="pdf-turma-block"><h3>${t.label}</h3>`;
+    let any = false;
+    getDiscs(key).forEach(d => {
+      const info = dados[key]&&dados[key][d];
+      if (info&&info.conteudo) {
+        html += `<div class="pdf-disc-row">
+          <strong>${ICONS[d]||''} ${LABELS[d]||d}</strong>
+          <span>${info.conteudo}</span>
+          <small>Prof. ${info.professor||'—'}</small>
+        </div>`;
+        any = true;
+      }
+    });
+    if (!any) html += '<p class="empty-note">Nenhum conteúdo preenchido ainda.</p>';
+    html += '</div>';
+  });
+  preview.innerHTML = html;
+}
+
+function generatePDF() {
+  const checks = [...document.querySelectorAll('#pdf-checks input:checked')].map(c=>c.value);
+  if (!checks.length) { showToast('Selecione ao menos uma turma!'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'mm',format:'a4'});
+  const W=210, mg=18, lh=7;
+  let y=20;
+
+  doc.setFillColor(15,27,45); doc.rect(0,0,W,30,'F');
+  doc.setFillColor(201,168,76); doc.rect(0,30,W,2,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(255,255,255);
+  doc.text('Conteudos - Recuperacao Semestral 1 Semestre', mg, 13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(160,160,160);
+  doc.text('Colegio Sao Thiago  |  '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}), mg, 22);
+  y=42;
+
+  checks.forEach(key => {
+    const t = TURMAS.find(x=>x.key===key);
+    if (y>258) { doc.addPage(); y=18; }
+    doc.setFillColor(238,242,247);
+    doc.roundedRect(mg-2, y-5, W-2*mg+4, 11, 2, 2, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(15,27,45);
+    doc.text(t.label+' — '+t.grupo, mg+2, y+2);
+    y+=12;
+
+    let any=false;
+    getDiscs(key).forEach((d,i) => {
+      const info = dados[key]&&dados[key][d];
+      if (!info||!info.conteudo) return;
+      any=true;
+      if (y>270) { doc.addPage(); y=18; }
+      if (i%2===0) { doc.setFillColor(250,251,253); doc.rect(mg-2,y-4,W-2*mg+4,lh+2,'F'); }
+      doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(15,27,45);
+      doc.text((LABELS[d]||d)+':', mg+2, y);
+      doc.setFont('helvetica','normal'); doc.setTextColor(55,55,55);
+      const lines = doc.splitTextToSize(info.conteudo, W-mg*2-46);
+      doc.text(lines, mg+46, y);
+      y += lh*lines.length + (lines.length>1?1:0);
+      if (info.professor) {
+        doc.setFontSize(6.5); doc.setTextColor(140,140,140);
+        doc.text('Prof. '+info.professor, mg+46, y);
+        y += 5;
+      }
+    });
+    if (!any) {
+      doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(160,160,160);
+      doc.text('Conteudos nao informados.', mg+2, y); y+=lh;
+    }
+    y+=7;
+  });
+
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setFillColor(15,27,45); doc.rect(0,287,W,10,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(130,130,130);
+    doc.text('Pagina '+p+' de '+pages, W/2, 293.5, {align:'center'});
+  }
+  doc.save('recuperacao_semestral_1sem.pdf');
+  showToast('📄 PDF gerado com sucesso!');
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  ['overview','pdf'].forEach((n,i)=>{
+    if(n===name) document.querySelectorAll('.tab')[i].classList.add('active');
+  });
+  if(name==='pdf') renderPDFChecks();
+  window.scrollTo(0,0);
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
+</body>
+</html>
