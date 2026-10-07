@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conteúdos — Prova Mensal — 4° Bimestre</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --navy:#0f1b2d; --navy2:#1a2d45; --gold:#c9a84c; --gold2:#e8c96d;
+    --cream:#f5f0e8; --white:#fff; --gray:#8a9ab0; --light:#eef2f7;
+    --green:#27ae60; --red:#e74c3c; --radius:14px;
+    --shadow:0 8px 32px rgba(15,27,45,0.12);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); min-height:100vh; color:var(--navy); }
+
+  header {
+    background:var(--navy); padding:22px 20px;
+    border-bottom:3px solid var(--gold);
+    text-align:center;
+  }
+  .logo { font-size:2rem; margin-bottom:6px; }
+  header h1 { font-family:'Playfair Display',serif; color:var(--white); font-size:1.25rem; line-height:1.3; }
+  header h1 span { color:var(--gold2); }
+  header p { color:var(--gray); font-size:.8rem; margin-top:4px; }
+
+  .container { max-width:560px; margin:0 auto; padding:28px 16px 80px; }
+
+  /* STEPS */
+  .steps { display:flex; gap:0; margin-bottom:28px; }
+  .step {
+    flex:1; text-align:center; padding:10px 4px;
+    font-size:.75rem; font-weight:600; color:var(--gray);
+    border-bottom:3px solid #d0d8e4;
+    transition:all .2s;
+  }
+  .step.active { color:var(--gold); border-bottom-color:var(--gold); }
+  .step.done   { color:var(--green); border-bottom-color:var(--green); }
+  .step-num {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:24px; height:24px; border-radius:50%;
+    background:#d0d8e4; color:var(--navy); font-size:.75rem;
+    font-weight:700; margin-bottom:4px;
+  }
+  .step.active .step-num { background:var(--gold); }
+  .step.done   .step-num { background:var(--green); color:var(--white); }
+  .step-label { display:block; margin-top:2px; }
+
+  /* CARD */
+  .card {
+    background:var(--white); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:24px;
+    border-top:4px solid var(--gold); margin-bottom:16px;
+  }
+  .card h2 { font-family:'Playfair Display',serif; font-size:1.1rem; margin-bottom:6px; color:var(--navy); }
+  .card p  { font-size:.85rem; color:var(--gray); margin-bottom:18px; line-height:1.5; }
+
+  /* SELECT GRID */
+  .select-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .select-grid.cols3 { grid-template-columns:repeat(3,1fr); }
+  .opt-btn {
+    padding:12px 8px; border:2px solid #d0d8e4;
+    background:var(--white); border-radius:10px;
+    font-family:'DM Sans',sans-serif; font-size:.82rem; font-weight:600;
+    cursor:pointer; transition:all .18s; color:var(--navy);
+    text-align:center; line-height:1.3;
+    -webkit-appearance:none;
+  }
+  .opt-btn:hover  { border-color:var(--gold); color:var(--gold); }
+  .opt-btn.active { background:var(--navy); color:var(--gold2); border-color:var(--navy); }
+
+  /* TEXTAREA */
+  .field-label {
+    display:flex; align-items:center; gap:8px;
+    font-size:.8rem; font-weight:700; color:var(--gray);
+    text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px;
+  }
+  textarea {
+    width:100%; min-height:120px; border:1.5px solid #d0d8e4;
+    border-radius:10px; padding:14px; font-family:'DM Sans',sans-serif;
+    font-size:.92rem; color:var(--navy); resize:vertical; outline:none;
+    transition:border-color .15s; line-height:1.6;
+    -webkit-appearance:none; background:var(--white);
+  }
+  textarea:focus { border-color:var(--gold); }
+  textarea::placeholder { color:#bcc5d0; }
+
+  /* NOME */
+  input[type=text] {
+    width:100%; border:1.5px solid #d0d8e4;
+    border-radius:10px; padding:13px 14px;
+    font-family:'DM Sans',sans-serif; font-size:.92rem;
+    color:var(--navy); outline:none; transition:border-color .15s;
+    -webkit-appearance:none; background:var(--white);
+  }
+  input[type=text]:focus { border-color:var(--gold); }
+  input[type=text]::placeholder { color:#bcc5d0; }
+
+  /* BUTTONS */
+  .btn {
+    width:100%; padding:15px; border:none; border-radius:50px;
+    font-family:'DM Sans',sans-serif; font-size:1rem; font-weight:700;
+    cursor:pointer; transition:all .2s; -webkit-appearance:none;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary { background:var(--navy); color:var(--gold2); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-gold { background:var(--gold); color:var(--navy); }
+  .btn-gold:active { transform:scale(.97); }
+  .btn-outline {
+    background:transparent; color:var(--gray);
+    border:2px solid #d0d8e4; font-size:.88rem;
+    padding:11px; margin-top:10px;
+  }
+  .btn:disabled { opacity:.45; cursor:not-allowed; transform:none !important; }
+
+  /* RESUMO */
+  .resumo-item {
+    display:flex; gap:10px; padding:10px 0;
+    border-bottom:1px dashed #e0e7ef; font-size:.88rem;
+  }
+  .resumo-item:last-child { border-bottom:none; }
+  .resumo-item strong { min-width:100px; color:var(--gray); font-weight:600; }
+  .resumo-item span { color:var(--navy); flex:1; }
+
+  /* SUCCESS */
+  .success-card {
+    background:var(--white); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:36px 24px;
+    text-align:center; border-top:4px solid var(--green);
+  }
+  .success-icon { font-size:3.5rem; margin-bottom:12px; }
+  .success-card h2 { font-family:'Playfair Display',serif; font-size:1.3rem; margin-bottom:8px; color:var(--navy); }
+  .success-card p { color:var(--gray); font-size:.88rem; line-height:1.6; margin-bottom:20px; }
+  .success-detail {
+    background:var(--light); border-radius:10px; padding:14px 16px;
+    font-size:.85rem; color:var(--navy2); text-align:left; margin-bottom:20px;
+    line-height:1.8;
+  }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:20px; left:50%;
+    transform:translateX(-50%) translateY(80px);
+    background:var(--navy); color:var(--white);
+    padding:12px 22px; border-radius:50px;
+    font-size:.85rem; box-shadow:0 6px 20px rgba(0,0,0,.25);
+    opacity:0; transition:all .3s; z-index:999;
+    border-left:4px solid var(--gold); white-space:nowrap;
+    max-width:90vw; text-align:center;
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+  /* LOADING */
+  #loading {
+    position:fixed; inset:0; background:var(--navy);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; z-index:9999; transition:opacity .4s;
+  }
+  #loading.hide { opacity:0; pointer-events:none; }
+  .spinner { width:40px;height:40px;border:4px solid rgba(201,168,76,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #loading p { color:var(--gray); font-size:.88rem; }
+
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size:2.5rem;">📚</div>
+  <div class="spinner"></div>
+  <p>Carregando...</p>
+</div>
+
+<header>
+  <div class="logo">📚</div>
+  <h1>Conteúdos para <span>Prova Mensal</span></h1>
+  <p>Colégio São Thiago — 4° Bimestre</p>
+</header>
+
+<div class="container">
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step1">
+      <div class="step-num">1</div>
+      <span class="step-label">Turma</span>
+    </div>
+    <div class="step" id="step2">
+      <div class="step-num">2</div>
+      <span class="step-label">Disciplina</span>
+    </div>
+    <div class="step" id="step3">
+      <div class="step-num">3</div>
+      <span class="step-label">Conteúdo</span>
+    </div>
+    <div class="step" id="step4">
+      <div class="step-num">4</div>
+      <span class="step-label">Confirmar</span>
+    </div>
+  </div>
+
+  <!-- TELA 1: TURMA -->
+  <div id="tela-turma">
+    <div class="card">
+      <h2>Selecione a Turma</h2>
+      <p>Qual turma você vai informar os conteúdos?</p>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Ensino Fundamental</div>
+        <div class="select-grid cols3" id="grid-ef"></div>
+      </div>
+      <div>
+        <div style="font-size:.75rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Ensino Médio</div>
+        <div class="select-grid" id="grid-em"></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-prox-1" onclick="irParaDisc()" disabled>Próximo →</button>
+  </div>
+
+  <!-- TELA 2: DISCIPLINA -->
+  <div id="tela-disc" class="hidden">
+    <div class="card">
+      <h2>Selecione a Disciplina</h2>
+      <p id="desc-disc">Qual disciplina você leciona nessa turma?</p>
+      <div class="select-grid" id="grid-disc"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-prox-2" onclick="irParaConteudo()" disabled>Próximo →</button>
+    <button class="btn btn-outline" onclick="voltarParaTurma()">← Voltar</button>
+  </div>
+
+  <!-- TELA 3: CONTEÚDO -->
+  <div id="tela-conteudo" class="hidden">
+    <div class="card">
+      <h2 id="titulo-conteudo">Conteúdo da Recuperação</h2>
+      <p>Digite os conteúdos que cairão na prova mensal do 3° bimestre.</p>
+
+      <div style="margin-bottom:16px;">
+        <div class="field-label">👤 Seu nome</div>
+        <input type="text" id="nome-professor" placeholder="Digite seu nome completo..." autocomplete="name">
+      </div>
+
+      <div>
+        <div class="field-label" id="label-conteudo">📝 Conteúdos</div>
+        <textarea id="conteudo-texto" placeholder="Ex: Frações, números decimais, porcentagem..."></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-prox-3" onclick="irParaResumo()">Revisar →</button>
+    <button class="btn btn-outline" onclick="voltarParaDisc()">← Voltar</button>
+  </div>
+
+  <!-- TELA 4: RESUMO -->
+  <div id="tela-resumo" class="hidden">
+    <div class="card">
+      <h2>Confirmar envio</h2>
+      <p>Revise as informações antes de enviar.</p>
+      <div id="resumo-content"></div>
+    </div>
+    <button class="btn btn-gold" id="btn-enviar" onclick="enviar()">✅ Enviar Conteúdo</button>
+    <button class="btn btn-outline" onclick="voltarParaConteudo()">← Voltar e editar</button>
+  </div>
+
+  <!-- TELA 5: SUCESSO -->
+  <div id="tela-sucesso" class="hidden">
+    <div class="success-card">
+      <div class="success-icon">🎉</div>
+      <h2>Conteúdo enviado!</h2>
+      <p>Os dados foram salvos com sucesso e já estão disponíveis para a coordenação.</p>
+      <div class="success-detail" id="sucesso-detail"></div>
+      <button class="btn btn-gold" onclick="novoEnvio()">📝 Enviar outro conteúdo</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
+const fbApp = firebase.apps.length
+  ? firebase.apps[0]
+  : firebase.initializeApp({
+      apiKey: "AIzaSyANjezpnLb5AVWRZgTsEmQQZUVDe9Vyryc",
+      authDomain: "conteudos-cst.firebaseapp.com",
+      databaseURL: "https://conteudos-cst-default-rtdb.firebaseio.com",
+      projectId: "conteudos-cst",
+      storageBucket: "conteudos-cst.firebasestorage.app",
+      messagingSenderId: "919498988914",
+      appId: "1:919498988914:web:b205c911a77dc1b6e6d1eb"
+    });
+const db = firebase.database(fbApp);
+
+// Esconde loading ao conectar
+db.ref('.info/connected').on('value', snap => {
+  const loading = document.getElementById('loading');
+  if (loading) { loading.classList.add('hide'); setTimeout(()=>loading.remove(),500); }
+});
+setTimeout(()=>{ const l=document.getElementById('loading'); if(l){l.classList.add('hide');setTimeout(()=>l.remove(),500);} }, 5000);
+
+// ── DADOS ─────────────────────────────────────────────────────────────────────
+const TURMAS = {
+  EF: [
+    {key:"6AnoA", label:"6° Ano A"},
+    {key:"6AnoB", label:"6° Ano B"},
+    {key:"7AnoA", label:"7° Ano A"},
+    {key:"7AnoB", label:"7° Ano B"},
+    {key:"8AnoA", label:"8° Ano A"},
+    {key:"8AnoB", label:"8° Ano B"},
+    {key:"9AnoA", label:"9° Ano A"},
+    {key:"9AnoB", label:"9° Ano B"},
+  ],
+  EM: [
+    {key:"1Serie", label:"1ª Série"},
+    {key:"2Serie", label:"2ª Série"},
+    {key:"3Serie", label:"3ª Série"},
+  ]
+};
+
+const DISC_EF = [
+  {key:"Portugues",       label:"Português"},
+  {key:"Matematica",      label:"Matemática"},
+  {key:"Historia",        label:"História"},
+  {key:"Geografia",       label:"Geografia"},
+  {key:"Ciencias",        label:"Ciências"},
+  {key:"EducacaoFisica",  label:"Ed. Física"},
+  {key:"Ingles",          label:"Inglês"},
+  {key:"Artes",           label:"Artes"},
+  {key:"ProducaoTextual", label:"Prod. Textual"},
+];
+const DISC_EM = [
+  {key:"Portugues",      label:"Português"},
+  {key:"Matematica",     label:"Matemática"},
+  {key:"Historia",       label:"História"},
+  {key:"Geografia",      label:"Geografia"},
+  {key:"EducacaoFisica", label:"Ed. Física"},
+  {key:"Ingles",         label:"Inglês"},
+  {key:"Artes",          label:"Artes"},
+  {key:"OficinaTexto",   label:"Oficina de Texto"},
+  {key:"Quimica",        label:"Química"},
+  {key:"Fisica",         label:"Física"},
+  {key:"Biologia",       label:"Biologia"},
+  {key:"Literatura",     label:"Literatura"},
+  {key:"Filosofia",      label:"Filosofia"},
+  {key:"Sociologia",     label:"Sociologia"},
+];
+
+let sel = { turmaKey:null, turmaLabel:null, discKey:null, discLabel:null };
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  const gef = document.getElementById('grid-ef');
+  const gem = document.getElementById('grid-em');
+  TURMAS.EF.forEach(t => {
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=t.label;
+    b.onclick=()=>selecionarTurma(t.key, t.label, b);
+    gef.appendChild(b);
+  });
+  TURMAS.EM.forEach(t => {
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=t.label;
+    b.onclick=()=>selecionarTurma(t.key, t.label, b);
+    gem.appendChild(b);
+  });
+}
+
+// ── TURMA ────────────────────────────────────────────────────────────────────
+function selecionarTurma(key, label, btn) {
+  sel.turmaKey = key; sel.turmaLabel = label;
+  document.querySelectorAll('#grid-ef .opt-btn, #grid-em .opt-btn')
+    .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('btn-prox-1').disabled = false;
+}
+
+function irParaDisc() {
+  if (!sel.turmaKey) return;
+  const isEM = TURMAS.EM.some(t => t.key===sel.turmaKey);
+  const discs = isEM ? DISC_EM : DISC_EF;
+  const grid = document.getElementById('grid-disc');
+  grid.innerHTML = '';
+  sel.discKey = null; sel.discLabel = null;
+  document.getElementById('btn-prox-2').disabled = true;
+  document.getElementById('desc-disc').textContent = 'Qual disciplina você leciona em ' + sel.turmaLabel + '?';
+  discs.forEach(d => {
+    const b = document.createElement('button');
+    b.className='opt-btn'; b.textContent=d.label;
+    b.onclick=()=>selecionarDisc(d.key, d.label, b);
+    grid.appendChild(b);
+  });
+  mostrarTela('tela-disc');
+  setStep(2);
+}
+
+// ── DISCIPLINA ────────────────────────────────────────────────────────────────
+function selecionarDisc(key, label, btn) {
+  sel.discKey = key; sel.discLabel = label;
+  document.querySelectorAll('#grid-disc .opt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('btn-prox-2').disabled = false;
+}
+
+function irParaConteudo() {
+  if (!sel.discKey) return;
+  document.getElementById('titulo-conteudo').textContent = sel.discLabel + ' — ' + sel.turmaLabel;
+  document.getElementById('label-conteudo').textContent = '📝 Conteúdos de ' + sel.discLabel;
+  mostrarTela('tela-conteudo');
+  setStep(3);
+  setTimeout(()=>document.getElementById('nome-professor').focus(), 300);
+}
+
+// ── CONTEÚDO ──────────────────────────────────────────────────────────────────
+function irParaResumo() {
+  const nome = document.getElementById('nome-professor').value.trim();
+  const conteudo = document.getElementById('conteudo-texto').value.trim();
+  if (!nome) { showToast('⚠️ Digite seu nome!'); document.getElementById('nome-professor').focus(); return; }
+  if (!conteudo) { showToast('⚠️ Digite os conteúdos!'); document.getElementById('conteudo-texto').focus(); return; }
+
+  document.getElementById('resumo-content').innerHTML = `
+    <div class="resumo-item"><strong>Professor</strong><span>${nome}</span></div>
+    <div class="resumo-item"><strong>Turma</strong><span>${sel.turmaLabel}</span></div>
+    <div class="resumo-item"><strong>Disciplina</strong><span>${sel.discLabel}</span></div>
+    <div class="resumo-item"><strong>Conteúdos</strong><span>${conteudo}</span></div>
+  `;
+  mostrarTela('tela-resumo');
+  setStep(4);
+}
+
+// ── ENVIAR ────────────────────────────────────────────────────────────────────
+function enviar() {
+  const nome     = document.getElementById('nome-professor').value.trim();
+  const conteudo = document.getElementById('conteudo-texto').value.trim();
+  const btn      = document.getElementById('btn-enviar');
+  btn.disabled   = true;
+  btn.textContent = '⏳ Enviando...';
+
+  const payload = {
+    conteudo: conteudo,
+    professor: nome,
+    atualizadoEm: new Date().toISOString()
+  };
+
+  db.ref('provaMensal4/' + sel.turmaKey + '/' + sel.discKey).set(payload)
+    .then(() => {
+      document.getElementById('sucesso-detail').innerHTML =
+        `<b>Professor:</b> ${nome}<br>
+         <b>Turma:</b> ${sel.turmaLabel}<br>
+         <b>Disciplina:</b> ${sel.discLabel}<br>
+         <b>Conteúdo:</b> ${conteudo}`;
+      mostrarTela('tela-sucesso');
+      setStep(4, true);
+    })
+    .catch(() => {
+      showToast('❌ Erro ao enviar. Verifique sua conexão.');
+      btn.disabled = false;
+      btn.textContent = '✅ Enviar Conteúdo';
+    });
+}
+
+function novoEnvio() {
+  sel = { turmaKey:null, turmaLabel:null, discKey:null, discLabel:null };
+  document.getElementById('nome-professor').value = '';
+  document.getElementById('conteudo-texto').value = '';
+  document.querySelectorAll('.opt-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-prox-1').disabled = true;
+  document.getElementById('btn-enviar').disabled = false;
+  document.getElementById('btn-enviar').textContent = '✅ Enviar Conteúdo';
+  mostrarTela('tela-turma');
+  setStep(1);
+  window.scrollTo(0,0);
+}
+
+// ── NAVEGAÇÃO ─────────────────────────────────────────────────────────────────
+function voltarParaTurma()    { mostrarTela('tela-turma');    setStep(1); }
+function voltarParaDisc()     { mostrarTela('tela-disc');     setStep(2); }
+function voltarParaConteudo() { mostrarTela('tela-conteudo'); setStep(3); }
+
+function mostrarTela(id) {
+  ['tela-turma','tela-disc','tela-conteudo','tela-resumo','tela-sucesso']
+    .forEach(t => document.getElementById(t).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function setStep(n, done) {
+  for (let i=1;i<=4;i++) {
+    const el = document.getElementById('step'+i);
+    el.classList.remove('active','done');
+    if (i < n || (i===n && done)) el.classList.add('done');
+    else if (i===n) el.classList.add('active');
+  }
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+init();
+</script>
+</body>
+</html>
